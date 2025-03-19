@@ -1,0 +1,384 @@
+---
+title: "Assessing the Impact of EU Fishery Policies on Fish Consumption and Production"
+subtitle: "DSA2101 Project"
+
+output: 
+  html_document:
+    toc: true
+    toc_float: 
+      collapsed: false
+    toc_depth: 3
+  
+author: "Group Name: Global Seafood, 96792"
+date: "`r Sys.Date()`"
+---
+
+<style>
+#TOC {
+  font-family: Calibri;
+  font-size: 15px;
+}
+body {
+  font-family: Calibri;
+  font-size: 16px;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# load data set:
+
+library(tidyverse)
+library(stringr)
+library(ggrepel)
+library(ggthemes)
+library(viridis)
+library(maps)
+library(knitr)
+
+farmed <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-10-12/aquaculture-farmed-fish-production.csv')
+captured_vs_farmed <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-10-12/capture-fisheries-vs-aquaculture.csv')
+captured <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-10-12/capture-fishery-production.csv')
+consumption <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-10-12/fish-and-seafood-consumption-per-capita.csv')
+stock <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-10-12/fish-stocks-within-sustainable-levels.csv')
+fishery <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-10-12/global-fishery-catch-by-sector.csv')
+production <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-10-12/seafood-and-fish-production-thousand-tonnes.csv')
+```
+
+## Introduction
+
+The fishing industry, one of the major contributors to the global economy, encompasses various sectors such as food supply, employment, environment, and more. This broad scope of influence leads to consistent high attention from the general public and media alike. Our dataset, from `OurWorldinData.org`, provides us with valuable insights into the industry’s trend and impact.  
+
+Our dataset contains seven individual CSV files, covering aquaculture production, captured fishery production, and their comparison, as well as seafood consumption, fish stock sustainability, global fish catch by sector, categories of fish production. Our project mainly focuses on fish consumption, capture and the production of fish in different categories. The variables below will be used in the following data visualization.  
+
++ Entity: a character variable, which has three levels – country, region, and world.
++ Year: a double variable.
++ Fish consumption: a double variable, which refers to the annual food consumed in kg per capita.
++ Captured fish production: a double variable, which refers to the annual production of captured fish and seafood in tons.
++ Fish category: a categorical variable, which includes 7 different seafood categories.
+
+Over decades, the decline of numerous fish species and the overexploitation of ocean resources have brought the issue of overfishing to the forefront. 
+
+The European Union (EU), as one of the most developed regions, has faced increasing scrutiny regarding its approach to fishery management: whether to prioritize short-term profits through increased fishing activity or to adopt environmental friendly and sustainable practices. Notably, the EU has pursued a balanced strategy, emphasizing sustainable fishing development. 
+
+To achieve this goal, the EU implemented  several policies with the Common Fisheries Policy (CFP) standing out as the key initiative. Introduced in the 1970s, the CFP was designed to make EU fishing grounds a common resource by giving access to all members. In 1983, Total Allowance Catches (TACs)  were introduced to strengthen this approach. This policy imposed species quotas and minimum set sizes in an attempt to combat overfishing. 
+
+With the dataset, we aim to explore the question:  
+**Was the EU's adoption of CFP and TACs effective in addressing the challenges of sustainable fisheries management?**
+
+<br>  
+
+## Plotting 1
+
+### Data Cleaning and Visualization
+
+Firstly, we think the impact brought by the policy can be impacted on the extent of fish consumption. 
+
+In this case, we use the dataset `consumption` to plot Figure 1. Since we aim to plot fish consumption per capita versus year for each continent, we have to get each continent's data. Firstly, we begin by filtering the data for each continent and store them in separate variables. Aftering filtering, we combine all variables together by stacking rows and arrange the resulting combined dataset in ascending order. It should be noted that there is no available data for Antarctica in this analysis.  
+
+To address our question, we intend to explore the consumption trend of fish in Europe over time. We utilize a line plot showing fish consumption per capita (y-axis) over time (x-axis), with Europe identified by purple color, the most outstanding color. A line plot allows for clear observation of trends over time, making it ideal for detecting any noticeable increase or decrease in consumption levels. Also, we also include lines of continents in the color of gray since, if there was a trend of Europe, we have to check if it is induced by global events, that is if all continents experienced a same direction change in consumption per capita. 
+
+
+```{r, fig.align='center', fig.cap="<center>Figure 1"}
+Asia<- consumption %>% filter(grepl("^Asia$",Entity, ignore.case = TRUE)) %>%
+  select(Year, Entity, `Fish, Seafood- Food supply quantity (kg/capita/yr) (FAO, 2020)`)
+
+Afria<- consumption %>% filter(grepl("^Africa$",Entity, ignore.case = TRUE)) %>%
+  select(Year, Entity, `Fish, Seafood- Food supply quantity (kg/capita/yr) (FAO, 2020)`)
+
+SAmerica<- consumption %>% filter(grepl("^South America$",Entity, ignore.case = TRUE) ) %>%
+  select(Year, Entity, `Fish, Seafood- Food supply quantity (kg/capita/yr) (FAO, 2020)`)
+
+NAmerica<- consumption %>% filter(grepl("^Northern America$",Entity, ignore.case = TRUE)) %>%
+  select(Year, Entity, `Fish, Seafood- Food supply quantity (kg/capita/yr) (FAO, 2020)`)
+
+Europe<- consumption %>% filter(grepl("^Europe$",Entity, ignore.case = TRUE)) %>%
+  select(Year, Entity, `Fish, Seafood- Food supply quantity (kg/capita/yr) (FAO, 2020)`)
+
+Oceania<- consumption %>% filter(grepl("^Oceania$",Entity, ignore.case = TRUE)) %>%
+  select(Year, Entity, `Fish, Seafood- Food supply quantity (kg/capita/yr) (FAO, 2020)`)
+
+# no data
+Antarctica<- consumption %>% filter(grepl("Antarctica",Entity, ignore.case = TRUE)) %>%
+  select(Entity, `Fish, Seafood- Food supply quantity (kg/capita/yr) (FAO, 2020)`)
+
+
+world_continent<- Asia %>% bind_rows(Afria) %>%
+  bind_rows(SAmerica) %>%
+  bind_rows(NAmerica) %>%
+  bind_rows(Europe) %>%
+  bind_rows(Oceania) %>%
+  arrange(Year) %>%
+  rename("consumption"=3)
+
+
+text_europe<- consumption %>% filter(grepl("^Europe$",Entity, ignore.case = TRUE)) %>%
+  select(Year, `Fish, Seafood- Food supply quantity (kg/capita/yr) (FAO, 2020)`, Entity) %>%
+  filter(Year==2013) %>%
+  rename("consumption"=2)
+
+a=subset(world_continent, Entity == "Europe" & Year %in% c(1986, 1994))
+
+ggplot(data=world_continent, aes(x=Year, y=consumption, group=Entity)) +
+  geom_line(aes(color=Entity), linewidth=1.2, show.legend = FALSE) +
+  geom_vline(xintercept = 1986, lty="dashed",col="black", linewidth=0.5) +
+  geom_vline(xintercept = 1994, lty="dashed",col="black", linewidth=0.5) +
+  theme( axis.title.x=element_text(vjust=-0.8), 
+        axis.title.y=element_text(hjust=0.5),
+        legend.text=element_text(size=10)) +
+  scale_x_continuous(breaks=seq(1962, 2013, 8), limits=c(1961, 2017)) +
+  scale_y_continuous(breaks = seq(0, 30, 10), limits = c(0, 30)) +
+  scale_color_manual(values=c("Africa"="grey87", "Asia"="grey87",
+                              "Northern America"="grey87",
+                              "Oceania"="grey87","South America"="grey87" ,"Europe"="mediumpurple"))+
+  labs(y="Fish Consumption Per Capita (kg/capita)", 
+       color="Continent" , title="Fish Consumption Per Capita of Continents",
+        x="") +
+  theme_stata(scheme="s2mono")+
+  geom_line(data = subset(world_continent, Entity == "Europe"),
+  aes(color = Entity), linewidth = 1.2, show.legend = FALSE) +
+  annotate("rect", xmin = 1986, xmax = 1994, ymin =0, ymax =30, fill = "mediumpurple1", alpha = 0.3) +
+  annotate(geom="curve", xend=1985.7, yend=23.3, x=1984, y=25,color="black",arrow=arrow(length = unit(0.1, "cm")),curvature = -0.2) +
+  annotate(geom="curve", xend=1994.3, yend=16, x=1995.5, y=14,color="black",arrow=arrow(length = unit(0.1, "cm")),curvature = 0.2) +
+  geom_point(
+    data = a,
+    aes(color = Entity),
+    size = 3,   
+    shape = 21, 
+    fill = "mediumpurple", show.legend = FALSE
+  )+geom_text(aes(x=2011, y=21.85), label='Europe',color="mediumpurple", size=5, hjust='left', nudge_x = 2.3)+
+  geom_text(aes(x=1984, y=25, label='22.54 kg/capita'),color="black", size=3.5, nudge_y =1.5, nudge_x=0.2)+
+  geom_text(aes(x=1998.7, y=14.5, label='16.64 kg/capita'),color="black", size=3.5, nudge_y =-1.5)
+
+```
+
+<br>  
+
+### Discussion
+
+In Figure 1, we observe a significant decline in fish consumption per capita for Europe starting from 1986 at 22.54 kg/capita, reaching its lowest point in 1994 at 16.64 kg/capita, indicating a 35.543% decrease. This sharp contrast stands out against other continents where fish consumption either increased or experienced only subtle declines during the same period. Consequently, this decline in Europe appears to be an isolated phenomenon not reflective of a global trend. The abrupt nature of this decrease suggests that it was likely influenced by policy implementations rather than broader economic or cultural shifts affecting worldwide fish consumption patterns. This policy may affect number of fish output and, in turn, fish consumption in Europe. 
+
+
+<br>  
+
+## Plotting 2
+
+### Data Cleaning and Visualization
+
+Then, we want to analyze how the output of different fish species was affected by the policy, which can shed light on distribution of quota on different fish species. 
+
+In this case, we use the dataset `production` to plot Figure 2. The data cleaning process started from renaming each column to the corresponding fish name. Since we want to verify the effects of policy, we focus on the time period of 5 years before policy implementation(1978-1982), early stage of policy implementation(1983-1987) and mature stage of policy implementation(1988-1992). Hence, observations from 1978 to 1992 are selected for this division. As so, there are three subplots plotted by facet. For each subplot, since we want to observe the changes of amount of fish for each type, the fish type is reasonably as the horizontal axis, and the growth rate is computed and selected as the vertical axis, which is the percentage change of the amount of fish during a particular time period. 
+
+A bar plot is an ideal visualization method for the study. This type of plot allows for direct comparison of multiple fish species across three stages of policy implementation.This approach will effectively convey insights into the impact of policy on fish populations, emphasizing both positive and negative variations in growth rates across the specified time periods. 
+
+
+```{r, fig.align='center', fig.cap="<center>Figure 2"}
+production %>%
+  rename("Pelagic Fish" = "Commodity Balances - Livestock and Fish Primary Equivalent - Pelagic Fish - 2763 - Production - 5510 - tonnes",
+         "Crustaceans" = "Commodity Balances - Livestock and Fish Primary Equivalent - Crustaceans - 2765 - Production - 5510 - tonnes",
+        "Cephalopods" = "Commodity Balances - Livestock and Fish Primary Equivalent - Cephalopods - 2766 - Production - 5510 - tonnes",
+        "Demersal Fish" ="Commodity Balances - Livestock and Fish Primary Equivalent - Demersal Fish - 2762 - Production - 5510 - tonnes",
+        "Freshwater Fish" = "Commodity Balances - Livestock and Fish Primary Equivalent - Freshwater Fish - 2761 - Production - 5510 - tonnes",
+        "Molluscs" = "Commodity Balances - Livestock and Fish Primary Equivalent - Molluscs, Other - 2767 - Production - 5510 - tonnes",
+        "Marine Fish" = "Commodity Balances - Livestock and Fish Primary Equivalent - Marine Fish, Other - 2764 - Production - 5510 - tonnes")  %>%
+  filter(Entity=="Europe", Year %in% c(1978, 1982, 1983,1987, 1988,1992)) %>%
+  select(-Code) %>%
+  mutate(Time=case_when(Year<=1982 ~ "Before Implementation\n (1978-1982)",
+                        Year<= 1987 ~ "Early Stage of Implementation\n (1983-1987)",
+                        Year <=1992 ~ "Mature Stage of Implementation\n (1988-1992)" )) %>% 
+  pivot_longer(-c(Entity,Year, Time), names_to = "Fish_Category", values_to = "Number") %>%
+  group_by(`Fish_Category`,Time )  %>%
+  mutate(last_period=lag(Number, order_by = Year),pct=(Number-last_period)/last_period) %>%
+  filter(!is.na(pct))-> df2
+
+text1<-data.frame(pct=1.1,
+                  Fish_Category="Crustaceans",
+                  label="1.04",
+                  Time= "Before Implementation\n (1978-1982)")
+text2<-data.frame(pct=0.45,
+                  Fish_Category="Crustaceans",
+                  label="0.37",
+                  Time= "Early Stage of Implementation\n (1983-1987)")
+text3<-data.frame(pct=-0.28,
+                  Fish_Category="Crustaceans",
+                  label="-0.20",
+                  Time= "Mature Stage of Implementation\n (1988-1992)" )
+text4<-data.frame(pct=0.1,
+                  Fish_Category="Marine Fish",
+                  label="0.02",
+                  Time= "Before Implementation\n (1978-1982)")
+text5<-data.frame(pct=-0.3,
+                  Fish_Category="Marine Fish",
+                  label="-0.23",
+                  Time= "Early Stage of Implementation\n (1983-1987)")
+text6<-data.frame(pct=-0.55,
+                  Fish_Category="Marine Fish",
+                  label="-0.46",
+                  Time= "Mature Stage of Implementation\n (1988-1992)" )
+
+ggplot(data=df2, aes(x=`Fish_Category`, y=pct, fill=`Fish_Category`)) +
+  geom_col() +
+  facet_wrap(~Time) +
+  theme_bw()+
+  theme(strip.background =element_rect(fill="lightyellow1"))+
+  theme(axis.text.x=element_blank(), axis.ticks.x = element_blank(), legend.position="bottom") +
+  scale_fill_brewer(palette = "Set2") +
+  geom_text(data=text1,aes(x=Fish_Category,y=pct,label=label),size=3) +
+  geom_text(data=text2,aes(x=Fish_Category,y=pct,label=label),size=3) +
+  geom_text(data=text3,aes(x=Fish_Category,y=pct,label=label),size=3) +
+  geom_text(data=text4,aes(x=Fish_Category,y=pct,label=label),size=3) +
+  geom_text(data=text5,aes(x=Fish_Category,y=pct,label=label),size=3) +
+  geom_text(data=text6,aes(x=Fish_Category,y=pct,label=label),size=3) +
+  labs(x="", y="Growth Rate", title="Growth Rate of Fish Production across Different Stages of CFP Implementation",
+       fill="Fish Category")
+```
+
+
+
+
+### Discussion
+
+
+In Figure 2, we notice a clear general trend: the production of all fish categories declined following the implementation of the first regulation of CFP in 1983 to the mature stage of implementation in 1992. This decline unfolded in two distinct stages. In the early stage of policy adoption, there was a general decrease in the growth rate of fish production. Subsequently, as the policy matured, the growth rate of major fish categories even turned negative, while some small fluctuation existed. The pattern aligns closely with the timeline of CFP and suggests a degree of effectiveness for the policy. Specifically, the impact on Crustaceans and marine fish is particularly pronounced: the growth rate of Crustaceans declined from 1.04 to 0.37, and then to -0.20, while the growth rate of marine fish decreased from 0.02 to -0.23, and then to -0.46 over each five-year period. These trends in our data correspond to the quota set by the EU to address overfishing.
+
+
+<br>  
+
+## Plotting 3
+
+### Data Cleaning and Visualization
+
+Finally, to have a better idea about the effectiveness of the policy, we want to visualize the changes of captured fish on country level in Europe via map. We firstly process the `capture_vs_aqaluture` dataset, to subset the years of 1983 and 1994, where it is time of start of policy implementation and 10 years after implementation. The percentage of change in captured fish from 1983 to 1994 is calculated. The positive and negative changes are displayed through different colors in the map to indicate important information - which country has decreased percentage change of captured fish and which country has the increased change. Due to dataset limitations, some of the EU countries lack data on fish capture in 1983 or in both years. These countries are colored gray.
+
+Using a map plot to visualize changes in captured fish on a country level in Europe is an ideal choice due to several key reasons. Firstly, map provides a valuable geographical context that immediately communicates the spatial distribution of changes, allowing viewers to grasp regional variations in captured fish percentages. The use of colors on a map offers an intuitive representation, with different colors indicating positive and negative changes in capture rates between 1983 and 1994. This visual approach simplifies the understanding of which countries experienced increases or decreases without the need for complex numerical interpretation. 
+
+```{r, fig.align='center', fig.cap="<center>Figure 3"}
+
+world <- map_data("world")
+
+
+european_countries <- c(
+  "Albania", "Andorra", "Austria", "Belarus", "Belgium", "Bosnia and Herzegovina",
+  "Bulgaria", "Croatia", "Cyprus", "Czechia", "Denmark", "Estonia",
+  "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland",
+  "Italy", "Kosovo", "Latvia", "Liechtenstein", "Lithuania", "Luxembourg",
+  "Malta", "Moldova", "Monaco", "Montenegro", "Netherlands", "North Macedonia",
+  "Norway", "Poland", "Portugal", "Romania", "San Marino", "Serbia",
+  "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland", "Turkey", "Ukraine",
+  "United Kingdom", "Vatican"
+)
+  
+captured_vs_farmed %>%
+  mutate(Entity = ifelse(Entity == "United Kingdom", "UK", Entity)) %>%
+  mutate(Entity = ifelse(Entity == "Czechia", "Czech Republic", Entity))%>%
+  filter(Entity %in% european_countries, Year %in% c(1983, 1994)) %>%
+  rename("Capture"=`Capture fisheries production (metric tons)`,
+         "Aquaculture"=`Aquaculture production (metric tons)`) %>%
+  group_by(Entity) %>%
+  mutate(Last_cap=lag(Capture, order_by = Year),
+        pct= ((Capture-Last_cap)/Last_cap)*100) %>%
+  filter(!is.na(pct)) %>%
+  mutate(pct=na_if(pct,Inf) ) -> d1
+
+world %>% 
+  filter(region %in% european_countries) %>% 
+  left_join(d1, by=c("region"="Entity")) -> w1
+
+d1 %>%
+  ungroup() %>%
+  slice_max(pct,n=2,na_rm =T) %>%
+  select(Entity, pct) -> Top2_pos
+
+d1 %>%
+  ungroup() %>%
+  slice_min(pct,n=2) %>%
+  select(Entity, pct)->Top2_neg
+
+world %>%
+  filter(region %in% Top2_pos$Entity | region %in% Top2_neg$Entity) %>%
+  group_by(region) %>%
+  summarize(x=mean(long),y=mean(lat)) ->label
+
+text<-data.frame(values=c("Cyprus\n386.24","Malta\n136.74","Bulgaria\n-93.91","Romania\n-89.43"), 
+                 long=c(41,18,33,31), 
+                 lat=c(31,33,44,50), 
+                 group=c(463,993,197,1241))
+
+line<-data.frame(x=c(33,14,25,25),
+                 y=c(35,36,43,46),
+                 xend=c(37,15,30,30),
+                 yend=c(32,34,43,48),
+                 group=c(463,993,197,1241))
+
+ggplot(data=w1, aes(x=long, y=lat, group=group)) +
+  geom_polygon(color="white", aes(fill=pct<0)) +
+  theme_void() +
+  theme(panel.background = element_rect(fill="lightskyblue1"),
+        legend.position="bottom",
+        plot.title = element_text(hjust=0.5, vjust = 3)) +
+  labs(fill="Percentage Change",
+       title="Percentage Change of Captured Fish in Europe between 1983 and 1994")+
+  scale_fill_manual(values = c("lightpink1","yellowgreen"),
+                    na.value = "grey90",
+                    name = "Percentage Change", 
+                    labels = c("Positive", "Negative","NA")) +
+  geom_text(data=text, mapping=aes(label=values,x=long,y=lat), 
+            size=2.5, fontface = "bold") +
+  geom_curve(data=line, linewidth=0.2, curvature = 0.1,
+             mapping=aes(x=x,y=y,xend=xend,yend=yend,group=group))
+```
+
+
+
+### Discussion
+
+The map in Figure 3 illustrates that during the period from 1983 to 1994, more countries experienced a decrease in the percentage of captured fish (14 countries) compared to those that saw an increase (11 countries). Bulgaria and Romania showed the most significant decreases, with percentages of -93.91% and -89.43% respectively. The dissolution of the Soviet Union had substantial implications for the fishing industries of these two countries. Historical arrangements and partnerships within the Soviet-led fishing blocs were disrupted, affecting access to specific fishing grounds and markets. Moreover, Bulgaria and Romania commenced the process of integrating with the European Union (EU) in the 1990s. As part of this integration, they were required to align their fisheries policies and practices with EU regulations, including fishing quotas and conservation measures. Thus, we can observe the effectiveness of EU policies such as the Common Fisheries Policy (CFP) and Total Allowable Catches (TACs) in limiting fishing activities.  
+
+Cyprus experienced an unexpected increase in captured fish, with a remarkable growth of over 386.24% from 1983 to 1994. This result is surprising considering that during this period, Cyprus was also preparing to join the EU, leaving the impact of policies on its fishing industry unresolved. One potential explanation for this anomaly is that Cyprus is an island nation, where fish consumption is popular among its citizens.  
+
+Similarly, Malta witnessed a significant increase in captured fish (136.74%). The reason behind this surge is uncertain, but being an island nation, Malta likely heavily relies on fisheries, suggesting that the impact of EU policies on its fishing activities may be relatively limited.
+
+
+
+
+
+
+<br>  
+
+## Conclusion
+
+Our investigation into the impact of policies which aim at restraining overfishing on Europe's seafood industry took a multifaceted approach, focusing on consumption, fishing activity, and aquaculture and captured fisheries production. Plot 1 depicted a sharp decline in per capita seafood consumption across Europe, indicating a tangible shift in consumer behavior likely influenced by policy implementation. Plot 2 echoed these findings, revealing parallel decreases across various fishing categories, suggesting a broad-reaching effect of the policy across the fishing sector. This coherence underscores the policy's significant influence on fishing practices throughout the EU. Figure 3 provided a nuanced perspective by revealing that decreasing in fisheries was not a general pattern as expected. Considering the policy within the broader context of historical events and contextualizing the policy's impact, we gained deeper insights into its effects, moving beyond intuitive assumption to acknowledge the complex interplay of factors shaping fishing activity.
+
+In summary, our analysis indicates that **the policy has effectively mitigated overfishing in Europe within the timeframe examined**.
+
+## Reference
+
+Common Fisheries policy. (2015, December 18). Civitas: Institute for the Study of Civil Society. https://www.civitas.org.uk/eu-facts/eu-overview/common-fisheries-policy/
+
+Common fisheries policy (CFP). (2024, April 19). Oceans and Fisheries. https://oceans-and-fisheries.ec.europa.eu/policy/common-fisheries-policy-cfp_en
+
+Fishing opportunities in the EU. (2024, January 11). Consilium. https://www.consilium.europa.eu/en/policies/eu-fish-stocks/tacs-and-fishing-opportunities/
+
+Karagiannakos, A. (1996). Total Allowable Catch (TAC) and quota management system in the European Union. Marine Policy, 20(3), 235–248. https://doi.org/10.1016/0308-597x(96)86986-7
+
+Rfordatascience. (2021, October 12). tidytuesday/data/2021/2021-10-12/readme.md at master · rfordatascience/tidytuesday. GitHub. https://github.com/rfordatascience/tidytuesday/blob/master/data/2021/2021-10-12/readme.md
+
+Taylor, N., Clarke, L.J., Alliji, K., Barrett, C., McIntyre, R., Smith, R.K., and Sutherland, W.J. (2021) Marine Fish Conservation: Global Evidence for the Effects of Selected Interventions. Synopses of Conservation Evidence Series. University of Cambridge, Cambridge, UK.
+
+Wikipedia contributors. (2024, April 4). Common Fisheries policy. Wikipedia. https://en.wikipedia.or
+
+## About
+This project was developed for *DSA2101 Essential Data Analytics Tools: Data Visualization* at the National University of Singapore (NUS). The team is comprised of the following members:
+```{r, echo=FALSE}
+first<-c("Name", 'Matriculation Number',"Year", "Major", "Responsibilities")
+d<- c("Deng Yunfei",'A0266310N',"Year 2", "Data Science and Analytics","Plot 1 and 3")
+h<- c("Hu Shiqi",'A0266090E',"Year 2", "Data Science and Economics","Plot 1 and 3")
+j<-c("Jiang Xintong",'A0266563W', "Year 2", "Statistics","Plot 2, Introduction and conclusion")
+z<- c("Zheng Jiaxin",'A0266129Y',"Year 2", "Data Science and Analytics","Plot 2,Introduction and conclusion")
+df<- rbind(first,d,h,j,z)
+
+kable(df, row.names=FALSE)
+```
+
+
